@@ -8,18 +8,42 @@ app.use(cors());
 app.use(bodyParser.json());
 
 const PORT = process.env.PORT || 3000;
-const WOMPI_PRIVATE_KEY = process.env.WOMPI_PRIVATE_KEY;
-const WOMPI_PUBLIC_KEY = process.env.WOMPI_PUBLIC_KEY;
+const WOMPI_CLIENT_ID = process.env.WOMPI_CLIENT_ID;
+const WOMPI_CLIENT_SECRET = process.env.WOMPI_CLIENT_SECRET;
 
+// 🔐 Obtener Token de Wompi
+const getWompiToken = async () => {
+    try {
+        const response = await axios.post(
+            "https://id.wompi.sv/connect/token",
+            new URLSearchParams({
+                grant_type: "client_credentials",
+                client_id: WOMPI_CLIENT_ID,
+                client_secret: WOMPI_CLIENT_SECRET
+            }),
+            {
+                headers: {
+                    "Content-Type": "application/x-www-form-urlencoded"
+                }
+            }
+        );
+        return response.data.access_token;
+    } catch (error) {
+        console.error("Error obteniendo el token de Wompi:", error.response?.data || error.message);
+        throw new Error("Error obteniendo el token de Wompi");
+    }
+};
+
+// 💳 Procesar el pago
 app.post("/process-payment", async (req, res) => {
     try {
+        const token = await getWompiToken(); // Obtener token antes de procesar el pago
         const { email, cardHolder, cardNumber, expiryDate, cvc, amount } = req.body;
 
-        // Enviar los datos a la API de Wompi
         const response = await axios.post(
             "https://sandbox.wompi.co/v1/transactions",
             {
-                amount: amount * 500, // Wompi usa centavos
+                amount: amount * 100, // Wompi usa centavos
                 currency: "USD",
                 email,
                 payment_source: {
@@ -33,7 +57,7 @@ app.post("/process-payment", async (req, res) => {
             },
             {
                 headers: {
-                    Authorization: `Bearer ${WOMPI_PRIVATE_KEY}`,
+                    Authorization: `Bearer ${token}`, // Usamos el token obtenido
                     "Content-Type": "application/json"
                 }
             }
@@ -41,37 +65,21 @@ app.post("/process-payment", async (req, res) => {
 
         // Revisar la respuesta de Wompi
         if (response.data.success) {
-            res.status(200).json({ success: true, message: "Pago exitoso" });
+            res.status(200).json({ success: true, message: "Pago exitoso", data: response.data });
         } else {
-            res.status(400).json({ success: false, message: "Pago fallido" });
+            res.status(400).json({ success: false, message: "Pago fallido", error: response.data });
         }
-    } 
-    
-    
-  catch (error) {
-        // Capturar el error y mostrar más detalles
-        if (error.response) {
-            // Si la respuesta contiene un error de Wompi, muestra los detalles
-            console.error("Error de Wompi:", error.response.data);
-            res.status(500).json({
-                success: false,
-                message: "Error procesando el pago",
-                error: error.response.data // Mostrar el error detallado
-            });
-        } else {
-            // Si no hay respuesta (error inesperado), muestra el error general
-            console.error("Error desconocido:", error.message);
-            res.status(500).json({
-                success: false,
-                message: "Error desconocido",
-                error: error.message });
+    } catch (error) {
+        console.error("Error en el pago:", error.response?.data || error.message);
+        res.status(500).json({
+            success: false,
+            message: "Error procesando el pago",
+            error: error.response?.data || error.message
+        });
     }
-}
-
-
-    
 });
 
+// 🌐 Iniciar el servidor
 app.listen(PORT, () => {
     console.log(`Servidor corriendo en el puerto ${PORT}`);
 });
