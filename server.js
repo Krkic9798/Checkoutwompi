@@ -1,5 +1,4 @@
-console.log("CLIENT_ID:", process.env.WOMPI_CLIENT_ID || "No definido");
-console.log("CLIENT_SECRET:", process.env.WOMPI_CLIENT_SECRET || "No definido");
+require('dotenv').config(); // Cargar variables de entorno
 
 const express = require("express");
 const cors = require("cors");
@@ -13,6 +12,12 @@ app.use(bodyParser.json());
 const PORT = process.env.PORT || 3000;
 const WOMPI_CLIENT_ID = process.env.WOMPI_CLIENT_ID;
 const WOMPI_CLIENT_SECRET = process.env.WOMPI_CLIENT_SECRET;
+
+// Verificación de que las credenciales estén definidas
+if (!WOMPI_CLIENT_ID || !WOMPI_CLIENT_SECRET) {
+    console.error("¡Error! Las credenciales de Wompi no están definidas en las variables de entorno.");
+    process.exit(1); // Termina la ejecución si las credenciales no están definidas
+}
 
 // 🔐 Obtener Token de Wompi
 const getWompiToken = async () => {
@@ -44,10 +49,10 @@ app.post("/process-payment", async (req, res) => {
         const { email, cardHolder, cardNumber, expiryDate, cvc, amount } = req.body;
 
         const response = await axios.post(
-            "https://sandbox.wompi.sv/v1/transactions",
+            "https://sandbox.wompi.sv/v1/transactions", // Usa esta URL para Sandbox, para producción cambia por https://api.wompi.sv/v1/transactions
             {
-                amount: amount * 100, // Wompi usa centavos
-                currency: "USD",
+                amount: amount * 100, // Wompi usa centavos, así que multiplicamos por 100
+                currency: "USD", // Cambiar a la moneda correcta según el país y la configuración
                 email,
                 payment_source: {
                     type: "CARD",
