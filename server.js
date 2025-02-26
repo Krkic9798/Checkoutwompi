@@ -1,5 +1,9 @@
 require("dotenv").config(); // Cargar variables de entorno
 
+
+console.log("Recibiendo solicitud de pago con datos:", req.body);
+
+
 const express = require("express");
 const cors = require("cors");
 const bodyParser = require("body-parser");
