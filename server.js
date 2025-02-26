@@ -46,9 +46,15 @@ app.post("/process-payment", async (req, res) => {
             res.status(400).json({ success: false, message: "Pago fallido" });
         }
     } catch (error) {
-        console.error("Error en el pago:", error.response ? error.response.data : error.message);
-        res.status(500).json({ success: false, message: "Error procesando el pago" });
+    // Verifica si hay una respuesta de error de Wompi
+    if (error.response) {
+        console.error("Error de Wompi:", error.response.data);
+        res.status(500).json({ success: false, message: "Error procesando el pago", error: error.response.data });
+    } else {
+        console.error("Error desconocido:", error.message);
+        res.status(500).json({ success: false, message: "Error desconocido", error: error.message });
     }
+}
 });
 
 app.listen(PORT, () => {
