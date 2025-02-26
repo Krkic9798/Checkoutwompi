@@ -1,3 +1,6 @@
+console.log("CLIENT_ID:", process.env.WOMPI_CLIENT_ID || "No definido");
+console.log("CLIENT_SECRET:", process.env.WOMPI_CLIENT_SECRET || "No definido");
+
 const express = require("express");
 const cors = require("cors");
 const bodyParser = require("body-parser");
