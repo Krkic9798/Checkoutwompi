@@ -49,7 +49,7 @@ app.post("/process-payment", async (req, res) => {
         const { email, cardHolder, cardNumber, expiryDate, cvc, amount } = req.body;
 
         const response = await axios.post(
-            "https://sandbox.wompi.com/v1/transactions", // Usa esta URL para Sandbox, para producción cambia por https://api.wompi.sv/v1/transactions
+            "https://sandbox.wompi.sv/transactions", // Usa esta URL para Sandbox, para producción cambia por https://api.wompi.sv/v1/transactions
             {
                 amount: amount * 100, // Wompi usa centavos, así que multiplicamos por 100
                 currency: "USD", // Cambiar a la moneda correcta según el país y la configuración
