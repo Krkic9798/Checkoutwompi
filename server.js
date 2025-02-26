@@ -17,7 +17,7 @@ app.post("/process-payment", async (req, res) => {
 
         // Enviar los datos a la API de Wompi
         const response = await axios.post(
-            "https://sandbox.wompi.sv/api/v1/transactions",
+            "https://sandbox.wompi.co/v1/transactions",
             {
                 amount: amount * 500, // Wompi usa centavos
                 currency: "USD",
