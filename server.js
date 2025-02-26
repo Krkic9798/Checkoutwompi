@@ -47,7 +47,7 @@ app.post("/process-payment", async (req, res) => {
             "https://sandbox.wompi.co/v1/transactions",
             {
                 amount: amount * 100, // Wompi usa centavos
-                currency: "USD",
+                currency: "COP",
                 email,
                 payment_source: {
                     type: "CARD",
