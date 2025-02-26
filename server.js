@@ -16,7 +16,7 @@ const WOMPI_CLIENT_SECRET = process.env.WOMPI_CLIENT_SECRET;
 // Verificación de que las credenciales estén definidas
 if (!WOMPI_CLIENT_ID || !WOMPI_CLIENT_SECRET) {
     console.error("¡Error! Las credenciales de Wompi no están definidas en las variables de entorno.");
-    process.exit(1); // Termina la ejecución si las credenciales no están definidas
+    process.exit(1);
 }
 
 // 🔐 Obtener Token de Wompi
@@ -48,8 +48,12 @@ app.post("/process-payment", async (req, res) => {
         const token = await getWompiToken(); // Obtener token antes de procesar el pago
         const { email, cardHolder, cardNumber, expiryDate, cvc, amount } = req.body;
 
-        const expMonth = expiryDate.split("/")[0];
-        const expYear = "20" + expiryDate.split("/")[1]; // Convertir a formato YYYY
+        if (!email || !cardHolder || !cardNumber || !expiryDate || !cvc || !amount) {
+            return res.status(400).json({ success: false, message: "Faltan datos en la solicitud." });
+        }
+
+        const [expMonth, expYearShort] = expiryDate.split("/");
+        const expYear = `20${expYearShort}`; // Convertir a formato YYYY
 
         const response = await axios.post(
             "https://api.wompi.sv/transactions", // URL corregida
@@ -76,7 +80,6 @@ app.post("/process-payment", async (req, res) => {
             }
         );
 
-        // Revisar la respuesta de Wompi
         if (response.data?.data?.status === "APPROVED") {
             res.status(200).json({ success: true, message: "Pago exitoso", data: response.data.data });
         } else {
