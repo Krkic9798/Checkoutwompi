@@ -1,5 +1,4 @@
-console.log("CLIENT_ID:", process.env.WOMPI_CLIENT_ID || "No definido");
-console.log("CLIENT_SECRET:", process.env.WOMPI_CLIENT_SECRET || "No definido");
+require("dotenv").config(); // Cargar variables de entorno
 
 const express = require("express");
 const cors = require("cors");
@@ -13,6 +12,12 @@ app.use(bodyParser.json());
 const PORT = process.env.PORT || 10000;
 const WOMPI_CLIENT_ID = process.env.WOMPI_CLIENT_ID;
 const WOMPI_CLIENT_SECRET = process.env.WOMPI_CLIENT_SECRET;
+
+// Verificación de que las credenciales estén definidas
+if (!WOMPI_CLIENT_ID || !WOMPI_CLIENT_SECRET) {
+    console.error("¡Error! Las credenciales de Wompi no están definidas en las variables de entorno.");
+    process.exit(1);
+}
 
 // 🔐 Obtener Token de Wompi
 const getWompiToken = async () => {
@@ -43,32 +48,40 @@ app.post("/process-payment", async (req, res) => {
         const token = await getWompiToken(); // Obtener token antes de procesar el pago
         const { email, cardHolder, cardNumber, expiryDate, cvc, amount } = req.body;
 
+        if (!email || !cardHolder || !cardNumber || !expiryDate || !cvc || !amount) {
+            return res.status(400).json({ success: false, message: "Faltan datos en la solicitud." });
+        }
+
+        const [expMonth, expYearShort] = expiryDate.split("/");
+        const expYear = `20${expYearShort}`; // Convertir a formato YYYY
+
         const response = await axios.post(
-            "https://api.wompi.sv/transactions",
+            "https://api.wompi.sv/transactions", // URL corregida
             {
-                amount: amount * 100, // Wompi usa centavos
+                amount_in_cents: amount * 100, // Wompi usa centavos
                 currency: "USD",
-                email,
+                customer_data: {
+                    email
+                },
                 payment_source: {
                     type: "CARD",
                     number: cardNumber,
                     cvc,
-                    exp_month: expiryDate.split("/")[0],
-                    exp_year: "20" + expiryDate.split("/")[1], // Convertir a formato YYYY
+                    exp_month: expMonth,
+                    exp_year: expYear,
                     card_holder: cardHolder
                 }
             },
             {
                 headers: {
-                    Authorization: `Bearer ${token}`, // Usamos el token obtenido
+                    Authorization: `Bearer ${token}`,
                     "Content-Type": "application/json"
                 }
             }
         );
 
-        // Revisar la respuesta de Wompi
-        if (response.data.success) {
-            res.status(200).json({ success: true, message: "Pago exitoso", data: response.data });
+        if (response.data?.data?.status === "APPROVED") {
+            res.status(200).json({ success: true, message: "Pago exitoso", data: response.data.data });
         } else {
             res.status(400).json({ success: false, message: "Pago fallido", error: response.data });
         }
@@ -86,4 +99,3 @@ app.post("/process-payment", async (req, res) => {
 app.listen(PORT, () => {
     console.log(`Servidor corriendo en el puerto ${PORT}`);
 });
-
