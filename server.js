@@ -1,4 +1,4 @@
-require('dotenv').config(); // Cargar variables de entorno
+require("dotenv").config(); // Cargar variables de entorno
 
 const express = require("express");
 const cors = require("cors");
@@ -48,32 +48,37 @@ app.post("/process-payment", async (req, res) => {
         const token = await getWompiToken(); // Obtener token antes de procesar el pago
         const { email, cardHolder, cardNumber, expiryDate, cvc, amount } = req.body;
 
+        const expMonth = expiryDate.split("/")[0];
+        const expYear = "20" + expiryDate.split("/")[1]; // Convertir a formato YYYY
+
         const response = await axios.post(
-            "https://sandbox.wompi.sv/transactions", // Usa esta URL para Sandbox, para producción cambia por https://api.wompi.sv/v1/transactions
+            "https://sandbox.wompi.sv/api/v1/transactions", // URL corregida
             {
-                amount: amount * 100, // Wompi usa centavos, así que multiplicamos por 100
-                currency: "USD", // Cambiar a la moneda correcta según el país y la configuración
-                email,
+                amount_in_cents: amount * 100, // Wompi usa centavos
+                currency: "USD",
+                customer_data: {
+                    email
+                },
                 payment_source: {
                     type: "CARD",
                     number: cardNumber,
                     cvc,
-                    exp_month: expiryDate.split("/")[0],
-                    exp_year: "20" + expiryDate.split("/")[1], // Convertir a formato YYYY
+                    exp_month: expMonth,
+                    exp_year: expYear,
                     card_holder: cardHolder
                 }
             },
             {
                 headers: {
-                    Authorization: `Bearer ${token}`, // Usamos el token obtenido
+                    Authorization: `Bearer ${token}`,
                     "Content-Type": "application/json"
                 }
             }
         );
 
         // Revisar la respuesta de Wompi
-        if (response.data.success) {
-            res.status(200).json({ success: true, message: "Pago exitoso", data: response.data });
+        if (response.data?.data?.status === "APPROVED") {
+            res.status(200).json({ success: true, message: "Pago exitoso", data: response.data.data });
         } else {
             res.status(400).json({ success: false, message: "Pago fallido", error: response.data });
         }
