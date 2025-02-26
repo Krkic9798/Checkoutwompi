@@ -52,7 +52,7 @@ app.post("/process-payment", async (req, res) => {
         const expYear = "20" + expiryDate.split("/")[1]; // Convertir a formato YYYY
 
         const response = await axios.post(
-            "https://sandbox.wompi.sv/api/v1/transactions", // URL corregida
+            "https://api.wompi.sv/transactions", // URL corregida
             {
                 amount_in_cents: amount * 100, // Wompi usa centavos
                 currency: "USD",
