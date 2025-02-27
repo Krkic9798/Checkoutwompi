@@ -10,7 +10,7 @@ const app = express();
 app.use(cors());
 app.use(bodyParser.json());
 
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 10000;
 const WOMPI_CLIENT_ID = process.env.WOMPI_CLIENT_ID;
 const WOMPI_CLIENT_SECRET = process.env.WOMPI_CLIENT_SECRET;
 
@@ -44,7 +44,7 @@ app.post("/process-payment", async (req, res) => {
         const { email, cardHolder, cardNumber, expiryDate, cvc, amount } = req.body;
 
         const response = await axios.post(
-            "https://api.wompi.sv/transactions",
+            "https://api.wompi.sv/",
             {
                 amount: amount * 100, // Wompi usa centavos
                 currency: "USD",
