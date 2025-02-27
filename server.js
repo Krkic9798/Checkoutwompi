@@ -13,13 +13,10 @@ app.use(bodyParser.json());
 const PORT = process.env.PORT || 3000;
 const WOMPI_CLIENT_ID = process.env.WOMPI_CLIENT_ID;
 const WOMPI_CLIENT_SECRET = process.env.WOMPI_CLIENT_SECRET;
-const WOMPI_ENV = process.env.WOMPI_ENV || "sandbox"; // "sandbox" o "production"
+const WOMPI_MODE = process.env.WOMPI_MODE || "prueba"; // "prueba" o "activo"
 
-// 🔗 URLs de Wompi
-const WOMPI_URLS = {
-    production: "https://api.wompi.sv"
-};
-const WOMPI_API_URL = WOMPI_URLS[WOMPI_ENV];
+// 🔗 URL base de Wompi
+const WOMPI_API_URL = "https://api.wompi.sv";
 
 // 🔐 Obtener Token de Wompi
 const getWompiToken = async () => {
@@ -61,9 +58,10 @@ app.post("/process-payment", async (req, res) => {
         const response = await axios.post(
             `${WOMPI_API_URL}/v1/transactions`,
             {
-                amount: amount * 100,
+                amount: amount * 100, // Convertir a centavos
                 currency: "USD",
                 email,
+                mode: WOMPI_MODE, // "prueba" o "activo"
                 payment_source: {
                     type: "CARD",
                     number: cardNumber,
@@ -106,5 +104,5 @@ app.post("/process-payment", async (req, res) => {
 
 // 🌐 Iniciar el servidor en Render
 app.listen(PORT, () => {
-    console.log(`🚀 Servidor corriendo en el puerto ${PORT} (Modo: ${WOMPI_ENV})`);
+    console.log(`🚀 Servidor corriendo en el puerto ${PORT} (Modo: ${WOMPI_MODE})`);
 });
