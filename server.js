@@ -44,7 +44,7 @@ app.post("/process-payment", async (req, res) => {
         const { email, cardHolder, cardNumber, expiryDate, cvc, amount } = req.body;
 
         const response = await axios.post(
-            "https://api.wompi.sv/",
+            "https://546454apiqui/",
             {
                 amount: amount * 100, // Wompi usa centavos
                 currency: "USD",
