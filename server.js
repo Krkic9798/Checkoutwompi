@@ -10,7 +10,7 @@ const app = express();
 app.use(cors());
 app.use(bodyParser.json());
 
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 1000;
 const WOMPI_CLIENT_ID = process.env.WOMPI_CLIENT_ID;
 const WOMPI_CLIENT_SECRET = process.env.WOMPI_CLIENT_SECRET;
 
