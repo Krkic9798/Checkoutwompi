@@ -5,7 +5,6 @@ const express = require("express");
 const cors = require("cors");
 const bodyParser = require("body-parser");
 const axios = require("axios");
-require("dotenv").config(); // Asegura que las variables de entorno estén disponibles
 
 const app = express();
 app.use(cors());
@@ -16,7 +15,7 @@ const WOMPI_CLIENT_ID = process.env.WOMPI_CLIENT_ID;
 const WOMPI_CLIENT_SECRET = process.env.WOMPI_CLIENT_SECRET;
 const WOMPI_ENV = process.env.WOMPI_ENV || "sandbox"; // "sandbox" o "production"
 
-// 🔗 URLs de Wompi (según el entorno)
+// 🔗 URLs de Wompi
 const WOMPI_URLS = {
     sandbox: "https://sandbox.wompi.sv",
     production: "https://api.wompi.sv"
@@ -47,10 +46,9 @@ const getWompiToken = async () => {
 // 💳 Procesar el pago
 app.post("/process-payment", async (req, res) => {
     try {
-        const token = await getWompiToken(); // Obtener token antes de procesar el pago
+        const token = await getWompiToken();
         const { email, cardHolder, cardNumber, expiryDate, cvc, amount } = req.body;
 
-        // 🔍 Validación de datos
         if (!email || !cardHolder || !cardNumber || !expiryDate || !cvc || !amount) {
             return res.status(400).json({
                 success: false,
@@ -59,13 +57,12 @@ app.post("/process-payment", async (req, res) => {
         }
 
         const expMonth = expiryDate.split("/")[0];
-        const expYear = "20" + expiryDate.split("/")[1]; // Convertir a formato YYYY
+        const expYear = "20" + expiryDate.split("/")[1];
 
-        // 🔗 Endpoint de transacciones Wompi
         const response = await axios.post(
             `${WOMPI_API_URL}/v1/transactions`,
             {
-                amount: amount * 100, // Wompi usa centavos
+                amount: amount * 100,
                 currency: "USD",
                 email,
                 payment_source: {
@@ -85,7 +82,6 @@ app.post("/process-payment", async (req, res) => {
             }
         );
 
-        // 📌 Revisar la respuesta de Wompi
         if (response.data.success) {
             res.status(200).json({
                 success: true,
