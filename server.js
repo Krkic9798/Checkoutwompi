@@ -1,4 +1,6 @@
-require("dotenv").config();
+console.log("CLIENT_ID:", process.env.WOMPI_CLIENT_ID || "No definido");
+console.log("CLIENT_SECRET:", process.env.WOMPI_CLIENT_SECRET || "No definido");
+
 const express = require("express");
 const cors = require("cors");
 const bodyParser = require("body-parser");
@@ -35,34 +37,14 @@ const getWompiToken = async () => {
     }
 };
 
-// 🆔 Consultar datos del aplicativo en Wompi
-const getWompiAppData = async (req, res) => {
-    try {
-        const token = await getWompiToken();
-        const response = await axios.get("https://api.wompi.sv/api/v1/applications", {
-            headers: {
-                Authorization: `Bearer ${token}`
-            }
-        });
-        res.status(200).json(response.data);
-    } catch (error) {
-        console.error("Error obteniendo datos del aplicativo:", error.response?.data || error.message);
-        res.status(500).json({
-            success: false,
-            message: "Error obteniendo datos del aplicativo",
-            error: error.response?.data || error.message
-        });
-    }
-};
-
 // 💳 Procesar el pago
 app.post("/process-payment", async (req, res) => {
     try {
-        const token = await getWompiToken();
+        const token = await getWompiToken(); // Obtener token antes de procesar el pago
         const { email, cardHolder, cardNumber, expiryDate, cvc, amount } = req.body;
 
         const response = await axios.post(
-            "https://api.wompi.sv/TransaccionCompra",
+            "https://api.wompi.sv/v1/transactions",
             {
                 amount: amount * 100, // Wompi usa centavos
                 currency: "USD",
@@ -78,12 +60,13 @@ app.post("/process-payment", async (req, res) => {
             },
             {
                 headers: {
-                    Authorization: `Bearer ${token}`,
+                    Authorization: `Bearer ${token}`, // Usamos el token obtenido
                     "Content-Type": "application/json"
                 }
             }
         );
 
+        // Revisar la respuesta de Wompi
         if (response.data.success) {
             res.status(200).json({ success: true, message: "Pago exitoso", data: response.data });
         } else {
@@ -98,9 +81,6 @@ app.post("/process-payment", async (req, res) => {
         });
     }
 });
-
-// 📌 Endpoint para obtener datos del aplicativo
-app.get("/app-data", getWompiAppData);
 
 // 🌐 Iniciar el servidor
 app.listen(PORT, () => {
