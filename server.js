@@ -1,6 +1,4 @@
-console.log("CLIENT_ID:", process.env.WOMPI_CLIENT_ID || "No definido");
-console.log("CLIENT_SECRET:", process.env.WOMPI_CLIENT_SECRET || "No definido");
-
+require("dotenv").config();
 const express = require("express");
 const cors = require("cors");
 const bodyParser = require("body-parser");
@@ -13,10 +11,6 @@ app.use(bodyParser.json());
 const PORT = process.env.PORT || 3000;
 const WOMPI_CLIENT_ID = process.env.WOMPI_CLIENT_ID;
 const WOMPI_CLIENT_SECRET = process.env.WOMPI_CLIENT_SECRET;
-const WOMPI_MODE = process.env.WOMPI_MODE || "prueba"; // "prueba" o "activo"
-
-// 🔗 URL base de Wompi
-const WOMPI_API_URL = "https://api.wompi.sv";
 
 // 🔐 Obtener Token de Wompi
 const getWompiToken = async () => {
@@ -29,13 +23,35 @@ const getWompiToken = async () => {
                 client_secret: WOMPI_CLIENT_SECRET
             }),
             {
-                headers: { "Content-Type": "application/x-www-form-urlencoded" }
+                headers: {
+                    "Content-Type": "application/x-www-form-urlencoded"
+                }
             }
         );
         return response.data.access_token;
     } catch (error) {
-        console.error("❌ Error obteniendo el token de Wompi:", error.response?.data || error.message);
+        console.error("Error obteniendo el token de Wompi:", error.response?.data || error.message);
         throw new Error("Error obteniendo el token de Wompi");
+    }
+};
+
+// 🆔 Consultar datos del aplicativo en Wompi
+const getWompiAppData = async (req, res) => {
+    try {
+        const token = await getWompiToken();
+        const response = await axios.get("https://api.wompi.sv/api/v1/applications", {
+            headers: {
+                Authorization: `Bearer ${token}`
+            }
+        });
+        res.status(200).json(response.data);
+    } catch (error) {
+        console.error("Error obteniendo datos del aplicativo:", error.response?.data || error.message);
+        res.status(500).json({
+            success: false,
+            message: "Error obteniendo datos del aplicativo",
+            error: error.response?.data || error.message
+        });
     }
 };
 
@@ -45,29 +61,18 @@ app.post("/process-payment", async (req, res) => {
         const token = await getWompiToken();
         const { email, cardHolder, cardNumber, expiryDate, cvc, amount } = req.body;
 
-        if (!email || !cardHolder || !cardNumber || !expiryDate || !cvc || !amount) {
-            return res.status(400).json({
-                success: false,
-                message: "Todos los campos son obligatorios."
-            });
-        }
-
-        const expMonth = expiryDate.split("/")[0];
-        const expYear = "20" + expiryDate.split("/")[1];
-
         const response = await axios.post(
-            `${WOMPI_API_URL}/v1/transactions`,
+            "https://api.wompi.sv/TransaccionCompra",
             {
-                amount: amount * 100, // Convertir a centavos
+                amount: amount * 100, // Wompi usa centavos
                 currency: "USD",
                 email,
-                mode: WOMPI_MODE, // "prueba" o "activo"
                 payment_source: {
                     type: "CARD",
                     number: cardNumber,
                     cvc,
-                    exp_month: expMonth,
-                    exp_year: expYear,
+                    exp_month: expiryDate.split("/")[0],
+                    exp_year: "20" + expiryDate.split("/")[1], // Convertir a formato YYYY
                     card_holder: cardHolder
                 }
             },
@@ -80,20 +85,12 @@ app.post("/process-payment", async (req, res) => {
         );
 
         if (response.data.success) {
-            res.status(200).json({
-                success: true,
-                message: "Pago exitoso",
-                data: response.data
-            });
+            res.status(200).json({ success: true, message: "Pago exitoso", data: response.data });
         } else {
-            res.status(400).json({
-                success: false,
-                message: "Pago fallido",
-                error: response.data
-            });
+            res.status(400).json({ success: false, message: "Pago fallido", error: response.data });
         }
     } catch (error) {
-        console.error("❌ Error en el pago:", error.response?.data || error.message);
+        console.error("Error en el pago:", error.response?.data || error.message);
         res.status(500).json({
             success: false,
             message: "Error procesando el pago",
@@ -102,7 +99,10 @@ app.post("/process-payment", async (req, res) => {
     }
 });
 
-// 🌐 Iniciar el servidor en Render
+// 📌 Endpoint para obtener datos del aplicativo
+app.get("/app-data", getWompiAppData);
+
+// 🌐 Iniciar el servidor
 app.listen(PORT, () => {
-    console.log(`🚀 Servidor corriendo en el puerto ${PORT} (Modo: ${WOMPI_MODE})`);
+    console.log(`Servidor corriendo en el puerto ${PORT}`);
 });
