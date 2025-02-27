@@ -1,26 +1,27 @@
-require("dotenv").config(); // Cargar variables de entorno
+console.log("CLIENT_ID:", process.env.WOMPI_CLIENT_ID || "No definido");
+console.log("CLIENT_SECRET:", process.env.WOMPI_CLIENT_SECRET || "No definido");
 
 const express = require("express");
 const cors = require("cors");
 const bodyParser = require("body-parser");
 const axios = require("axios");
+require("dotenv").config(); // Asegura que las variables de entorno estén disponibles
 
 const app = express();
 app.use(cors());
 app.use(bodyParser.json());
 
-const PORT = process.env.PORT || 10000;
+const PORT = process.env.PORT || 3000;
 const WOMPI_CLIENT_ID = process.env.WOMPI_CLIENT_ID;
 const WOMPI_CLIENT_SECRET = process.env.WOMPI_CLIENT_SECRET;
+const WOMPI_ENV = process.env.WOMPI_ENV || "sandbox"; // "sandbox" o "production"
 
-// 🔍 Verificar credenciales antes de iniciar el servidor
-if (!WOMPI_CLIENT_ID || !WOMPI_CLIENT_SECRET) {
-    console.error("❌ Error: Las credenciales de Wompi no están definidas en las variables de entorno.");
-    process.exit(1); // Finaliza la ejecución si faltan credenciales
-}
-
-console.log("✅ CLIENT_ID:", WOMPI_CLIENT_ID ? "Definido" : "No definido");
-console.log("✅ CLIENT_SECRET:", WOMPI_CLIENT_SECRET ? "Definido" : "No definido");
+// 🔗 URLs de Wompi (según el entorno)
+const WOMPI_URLS = {
+    sandbox: "https://sandbox.wompi.sv",
+    production: "https://api.wompi.sv"
+};
+const WOMPI_API_URL = WOMPI_URLS[WOMPI_ENV];
 
 // 🔐 Obtener Token de Wompi
 const getWompiToken = async () => {
@@ -39,7 +40,7 @@ const getWompiToken = async () => {
         return response.data.access_token;
     } catch (error) {
         console.error("❌ Error obteniendo el token de Wompi:", error.response?.data || error.message);
-        throw new Error("Error al obtener el token de Wompi");
+        throw new Error("Error obteniendo el token de Wompi");
     }
 };
 
@@ -49,19 +50,24 @@ app.post("/process-payment", async (req, res) => {
         const token = await getWompiToken(); // Obtener token antes de procesar el pago
         const { email, cardHolder, cardNumber, expiryDate, cvc, amount } = req.body;
 
+        // 🔍 Validación de datos
         if (!email || !cardHolder || !cardNumber || !expiryDate || !cvc || !amount) {
-            return res.status(400).json({ success: false, message: "Faltan datos en la solicitud." });
+            return res.status(400).json({
+                success: false,
+                message: "Todos los campos son obligatorios."
+            });
         }
 
         const expMonth = expiryDate.split("/")[0];
         const expYear = "20" + expiryDate.split("/")[1]; // Convertir a formato YYYY
 
+        // 🔗 Endpoint de transacciones Wompi
         const response = await axios.post(
-            "https://api.wompi.sv/v1/transactions",
+            `${WOMPI_API_URL}/v1/transactions`,
             {
-                amount_in_cents: amount * 100, // Wompi usa centavos
+                amount: amount * 100, // Wompi usa centavos
                 currency: "USD",
-                customer_data: { email },
+                email,
                 payment_source: {
                     type: "CARD",
                     number: cardNumber,
@@ -73,17 +79,25 @@ app.post("/process-payment", async (req, res) => {
             },
             {
                 headers: {
-                    Authorization: `Bearer ${token}`, // Usamos el token obtenido
+                    Authorization: `Bearer ${token}`,
                     "Content-Type": "application/json"
                 }
             }
         );
 
-        // Revisar la respuesta de Wompi
-        if (response.data?.data?.status === "APPROVED") {
-            res.status(200).json({ success: true, message: "Pago exitoso", data: response.data.data });
+        // 📌 Revisar la respuesta de Wompi
+        if (response.data.success) {
+            res.status(200).json({
+                success: true,
+                message: "Pago exitoso",
+                data: response.data
+            });
         } else {
-            res.status(400).json({ success: false, message: "Pago fallido", error: response.data });
+            res.status(400).json({
+                success: false,
+                message: "Pago fallido",
+                error: response.data
+            });
         }
     } catch (error) {
         console.error("❌ Error en el pago:", error.response?.data || error.message);
@@ -95,7 +109,7 @@ app.post("/process-payment", async (req, res) => {
     }
 });
 
-// 🌐 Iniciar el servidor
+// 🌐 Iniciar el servidor en Render
 app.listen(PORT, () => {
-    console.log(`🚀 Servidor corriendo en el puerto ${PORT}`);
+    console.log(`🚀 Servidor corriendo en el puerto ${PORT} (Modo: ${WOMPI_ENV})`);
 });
