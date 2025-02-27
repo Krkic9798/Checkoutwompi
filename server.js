@@ -17,7 +17,6 @@ const WOMPI_ENV = process.env.WOMPI_ENV || "sandbox"; // "sandbox" o "production
 
 // 🔗 URLs de Wompi
 const WOMPI_URLS = {
-    sandbox: "https://sandbox.wompi.sv",
     production: "https://api.wompi.sv"
 };
 const WOMPI_API_URL = WOMPI_URLS[WOMPI_ENV];
